@@ -26,8 +26,6 @@ use Magento\Framework\App\Response\Http;
 use Magento\Framework\Error\Processor;
 use Magento\Framework\View\Element\Template\File\Resolver;
 
-require_once BP . '/pub/errors/processor.php';
-
 /**
  * Class ErrorProcessor
  * @package Mageplaza\Security\Helper
