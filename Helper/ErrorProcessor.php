@@ -23,10 +23,9 @@ namespace Mageplaza\Security\Helper;
 
 use Magento\Backend\App\Area\FrontNameResolver;
 use Magento\Framework\App\Response\Http;
-use Magento\Framework\Error\Processor;
+use Mageplaza\Security\Error\Processor;
 use Magento\Framework\View\Element\Template\File\Resolver;
 
-require_once BP . '/pub/errors/processor.php';
 
 /**
  * Class ErrorProcessor
