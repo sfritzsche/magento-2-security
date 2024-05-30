@@ -26,10 +26,13 @@ use Magento\Config\Model\Config\Reader\Source\Deployed\DocumentRoot;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\Response\Http;
 use Magento\Framework\Escaper;
+use Magento\Framework\Filesystem\Io\File;
+use Magento\Framework\Mail\Template\TransportBuilder;
 use Magento\Framework\Serialize\Serializer\Json;
-use Mageplaza\Security\Error\Processor;
 use Magento\Framework\View\Element\Template\File\Resolver;
-
+use Magento\Framework\View\LayoutInterface;
+use Mageplaza\Security\Error\Processor;
+use Psr\Log\LoggerInterface;
 
 /**
  * Class ErrorProcessor
@@ -50,6 +53,10 @@ class ErrorProcessor extends Processor
     /**
      * @param Http $response
      * @param RequestInterface $request
+     * @param TransportBuilder $transportBuilder
+     * @param LoggerInterface $logger
+     * @param LayoutInterface $layout
+     * @param File $file
      * @param Json|null $serializer
      * @param Escaper|null $escaper
      * @param DocumentRoot|null $documentRoot
@@ -57,11 +64,25 @@ class ErrorProcessor extends Processor
     public function __construct(
         Http $response,
         RequestInterface $request,
+        TransportBuilder $transportBuilder,
+        LoggerInterface $logger,
+        LayoutInterface $layout,
+        File $file,
         Json $serializer = null,
         Escaper $escaper = null,
         DocumentRoot $documentRoot = null
     ) {
-        parent::__construct($response, $request, $serializer, $escaper, $documentRoot);
+        parent::__construct(
+            $response,
+            $request,
+            $transportBuilder,
+            $logger,
+            $layout,
+            $file,
+            $serializer,
+            $escaper,
+            $documentRoot
+        );
     }
 
     /**
@@ -75,10 +96,10 @@ class ErrorProcessor extends Processor
      */
     public function processSecurityReport($errorCode = '', $reportData = '', $title = '')
     {
-        $this->pageTitle = $title ?: __('You don\'t have permission to access this page');
+        $this->pageTitle  = $title ?: __('You don\'t have permission to access this page');
         $this->pageTitle  = $title ?: __('You don\'t have permission to access this page');
         $this->reportData = $reportData;
-        $this->errorCode = $errorCode;
+        $this->errorCode  = $errorCode;
         $this->errorCode  = $errorCode;
 
         $html = $this->_renderPage('security_report');
