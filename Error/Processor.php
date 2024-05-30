@@ -1,7 +1,22 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Mageplaza
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Mageplaza.com license that is
+ * available through the world-wide-web at this URL:
+ * https://www.mageplaza.com/LICENSE.txt
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade this extension to newer
+ * version in the future.
+ *
+ * @category    Mageplaza
+ * @package     Mageplaza_Security
+ * @copyright   Copyright (c) Mageplaza (https://www.mageplaza.com/)
+ * @license     https://www.mageplaza.com/LICENSE.txt
  */
 declare(strict_types=1);
 
@@ -12,13 +27,10 @@ use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\Escaper;
 use Magento\Framework\App\ObjectManager;
 use Magento\Framework\App\Response\Http;
-
+use Magento\Framework\App\RequestInterface;
 /**
- * Error processor
- *
- * @SuppressWarnings(PHPMD.TooManyFields)
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
- * phpcs:ignoreFile
+ * Class Processor
+ * @package Mageplaza\Security\Error
  */
 class Processor
 {
@@ -171,38 +183,46 @@ class Processor
     private $documentRoot;
 
     /**
+     * @var RequestInterface
+     */
+    protected $request;
+
+    /**
      * @param Http $response
-     * @param Json $serializer
-     * @param Escaper $escaper
+     * @param Json|null $serializer
+     * @param Escaper|null $escaper
      * @param DocumentRoot|null $documentRoot
+     * @param RequestInterface $request
      */
     public function __construct(
         Http $response,
+        RequestInterface $request,
         Json $serializer = null,
         Escaper $escaper = null,
         DocumentRoot $documentRoot = null
     ) {
         $this->_response = $response;
+        $this->request   = $request;
         $this->_errorDir  = __DIR__ . '/';
         $this->_reportDir = dirname(dirname($this->_errorDir)) . '/var/report/';
         $this->serializer = $serializer ?: ObjectManager::getInstance()->get(Json::class);
         $this->escaper = $escaper ?: ObjectManager::getInstance()->get(Escaper::class);
         $this->documentRoot = $documentRoot ?? ObjectManager::getInstance()->get(DocumentRoot::class);
-        if (!empty($_SERVER['SCRIPT_NAME'])) {
-            if (in_array(basename($_SERVER['SCRIPT_NAME'], '.php'), ['404', '503', 'report'])) {
-                $this->_scriptName = dirname($_SERVER['SCRIPT_NAME']);
+        if (!empty($this->request->getParam('SCRIPT_NAME'))) {
+            if (in_array(basename($this->request->getParam('SCRIPT_NAME'), '.php'), ['404', '503', 'report'])) {
+                $this->_scriptName = dirname($this->request->getParam('SCRIPT_NAME'));
             } else {
-                $this->_scriptName = $_SERVER['SCRIPT_NAME'];
+                $this->_scriptName = $this->request->getParam('SCRIPT_NAME');
             }
         }
         $this->_indexDir = $this->_getIndexDir();
         $this->_root  = is_dir($this->_indexDir . 'app');
         $this->_prepareConfig();
-        if (isset($_GET['skin'])) {
-            $this->_setSkin($_GET['skin']);
+        if ($this->request->getParam('skin') !== null) {
+            $this->_setSkin($this->request->getParam('skin'));
         }
-        if (isset($_GET['id'])) {
-            $this->loadReport($_GET['id']);
+        if ($this->request->getParam('id') !== null) {
+            $this->loadReport($this->request->getParam('id'));
         }
         $response->setMetadata("NotCacheable", true);
     }
@@ -298,8 +318,8 @@ class Processor
          */
         $host = $this->resolveHostName();
 
-        $isSecure = (!empty($_SERVER['HTTPS'])) && ($_SERVER['HTTPS'] !== 'off')
-            || isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && ($_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        $isSecure = (!empty($this->request->getParam('HTTPS'))) && ($this->request->getParam('HTTPS') !== 'off')
+            || $this->request->getParam('HTTP_X_FORWARDED_PROTO') !== null && ($this->request->getParam('HTTP_X_FORWARDED_PROTO') === 'https');
         $url = ($isSecure ? 'https://' : 'http://') . $host;
 
         $port = explode(':', $host);
@@ -318,10 +338,10 @@ class Processor
      */
     private function resolveHostName() : string
     {
-        if (!empty($_SERVER['HTTP_HOST'])) {
-            $host = $_SERVER['HTTP_HOST'];
-        } elseif (!empty($_SERVER['SERVER_NAME'])) {
-            $host = $_SERVER['SERVER_NAME'];
+        if (!empty($this->request->getParam('HTTP_HOST'))) {
+            $host = $this->request->getParam('HTTP_HOST');
+        } elseif (!empty($this->request->getParam('SERVER_NAME'))) {
+            $host = $this->request->getParam('SERVER_NAME');
         } else {
             $host = 'localhost';
         }
@@ -353,7 +373,7 @@ class Processor
      */
     protected function _getClientIp()
     {
-        return (isset($_SERVER['REMOTE_ADDR'])) ? $_SERVER['REMOTE_ADDR'] : 'undefined';
+        return ($this->request->getParam('REMOTE_ADDR') !== null) ? $this->request->getParam('REMOTE_ADDR') : 'undefined';
     }
 
     /**
@@ -364,8 +384,8 @@ class Processor
     protected function _getIndexDir()
     {
         $documentRoot = '';
-        if (!empty($_SERVER['DOCUMENT_ROOT'])) {
-            $documentRoot = rtrim(realpath($_SERVER['DOCUMENT_ROOT']), '/');
+        if (!empty($this->request->getParam('DOCUMENT_ROOT'))) {
+            $documentRoot = rtrim(realpath($this->request->getParam('DOCUMENT_ROOT')), '/');
         }
         return dirname($documentRoot . $this->_scriptName) . '/';
     }
@@ -636,7 +656,7 @@ class Processor
     private function getReportDirNestingLevel(string $reportId): int
     {
         $envName = 'MAGE_ERROR_REPORT_DIR_NESTING_LEVEL';
-        $value = $_ENV[$envName] ?? getenv($envName);
+        $value = $this->request->getParam($envName) ?? getenv($envName);
         if(false === $value && property_exists($this->_config, 'dir_nesting_level')) {
             $value = $this->_config->dir_nesting_level;
         }
@@ -667,18 +687,18 @@ class Processor
     {
         $this->pageTitle = 'Error Submission Form';
 
-        $this->postData['firstName'] = (isset($_POST['firstname']))
-            ? trim($this->escaper->escapeHtml($_POST['firstname'])) : '';
-        $this->postData['lastName'] = (isset($_POST['lastname']))
-            ? trim($this->escaper->escapeHtml($_POST['lastname'])) : '';
-        $this->postData['email'] = (isset($_POST['email']))
-            ? trim($this->escaper->escapeHtml($_POST['email'])) : '';
-        $this->postData['telephone'] = (isset($_POST['telephone']))
-            ? trim($this->escaper->escapeHtml($_POST['telephone'])) : '';
-        $this->postData['comment'] = (isset($_POST['comment']))
-            ? trim($this->escaper->escapeHtml($_POST['comment'])) : '';
+        $this->postData['firstName'] = ($this->request->getParam('firstname') !== null)
+            ? trim($this->escaper->escapeHtml($this->request->getParam('firstname'))) : '';
+        $this->postData['lastName'] = ($this->request->getParam('lastname') !== null)
+            ? trim($this->escaper->escapeHtml($this->request->getParam('lastname'))) : '';
+        $this->postData['email'] = ($this->request->getParam('email') !== null)
+            ? trim($this->escaper->escapeHtml($this->request->getParam('email'))) : '';
+        $this->postData['telephone'] = ($this->request->getParam('telephone') !== null)
+            ? trim($this->escaper->escapeHtml($this->request->getParam('telephone'))) : '';
+        $this->postData['comment'] = ($this->request->getParam('comment') !== null)
+            ? trim($this->escaper->escapeHtml($this->request->getParam('comment'))) : '';
 
-        if (isset($_POST['submit'])) {
+        if ($this->request->getParam('submit') !== null) {
             if ($this->_validate()) {
                 $msg  = "URL: {$this->reportData['url']}\n"
                     . "IP Address: {$this->_getClientIp()}\n"

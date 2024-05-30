@@ -22,7 +22,11 @@
 namespace Mageplaza\Security\Helper;
 
 use Magento\Backend\App\Area\FrontNameResolver;
+use Magento\Config\Model\Config\Reader\Source\Deployed\DocumentRoot;
+use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\Response\Http;
+use Magento\Framework\Escaper;
+use Magento\Framework\Serialize\Serializer\Json;
 use Mageplaza\Security\Error\Processor;
 use Magento\Framework\View\Element\Template\File\Resolver;
 
@@ -44,18 +48,20 @@ class ErrorProcessor extends Processor
     protected $errorCode;
 
     /**
-     * ErrorProcessor constructor.
-     *
      * @param Http $response
-     * @param Resolver $resolver
+     * @param RequestInterface $request
+     * @param Json|null $serializer
+     * @param Escaper|null $escaper
+     * @param DocumentRoot|null $documentRoot
      */
     public function __construct(
         Http $response,
-        Resolver $resolver
+        RequestInterface $request,
+        Json $serializer = null,
+        Escaper $escaper = null,
+        DocumentRoot $documentRoot = null
     ) {
-        $this->_resolver = $resolver;
-
-        parent::__construct($response);
+        parent::__construct($response, $request, $serializer, $escaper, $documentRoot);
     }
 
     /**
