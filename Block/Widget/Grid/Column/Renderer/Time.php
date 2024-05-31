@@ -60,13 +60,15 @@ class Time extends AbstractRenderer
         $ago  = new DateTime($datetime);
         $diff = $now->diff($ago);
 
-        $diff->w = floor($diff->d / 7);
-        $diff->d -= $diff->w * 7;
+        if ($diff->d >= 7) {
+            $diff->w = floor($diff->d / 7);
+            $diff->d -= $diff->w * 7;
+            $string[] = ['w' => 'week'];
+        }
 
         $string = [
             'y' => 'year',
             'm' => 'month',
-            'w' => 'week',
             'd' => 'day',
             'h' => 'hour',
             'i' => 'minute',

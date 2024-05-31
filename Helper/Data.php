@@ -32,7 +32,7 @@ use Mageplaza\Core\Helper\AbstractData;
 use Sinergi\BrowserDetector\Browser;
 use Sinergi\BrowserDetector\Os;
 use Sinergi\BrowserDetector\UserAgent;
-
+use Magento\Store\Model\ScopeInterface;
 /**
  * Class Data
  * @package Mageplaza\Security\Helper
@@ -209,5 +209,21 @@ class Data extends AbstractData
         }
 
         return $currentTime;
+    }
+
+    /**
+     * Get the formatted date and time in store's timezone
+     *
+     * @param string $time
+     * @param string $format
+     *
+     * @return string
+     * @throws Exception
+     */
+    public function getFormattedDateTimeInStoreTimezone($time, $format = 'Y-m-d H:i:s')
+    {
+        $timezone = $this->timezone->getConfigTimezone(ScopeInterface::SCOPE_STORE);
+        $date = new DateTime($time, new DateTimeZone($timezone));
+        return $date->format($format);
     }
 }
