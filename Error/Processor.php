@@ -435,8 +435,8 @@ class Processor
     protected function _getIndexDir()
     {
         $documentRoot = '';
-        if (!empty($this->request->getParam('DOCUMENT_ROOT'))) {
-            $documentRoot = rtrim(realpath($this->request->getParam('DOCUMENT_ROOT')), '/');
+        if (!empty($this->request->getServer('DOCUMENT_ROOT'))) {
+            $documentRoot = rtrim(realpath($this->request->getServer('DOCUMENT_ROOT')), '/');
         }
 
         return dirname($documentRoot . $this->_scriptName) . '/';
